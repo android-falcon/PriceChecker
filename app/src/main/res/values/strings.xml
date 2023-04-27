@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PriceChecker</string>
+    <string name="app_ok">OK</string>
+    <string name="enter_password">Enter password</string>
+</resources>
