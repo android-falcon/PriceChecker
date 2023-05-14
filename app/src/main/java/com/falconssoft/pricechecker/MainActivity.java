@@ -751,9 +751,9 @@ try {
 
                 if (!response.isSuccessful()) {
 //                    fetchCashDetailData(from, toDat, pos, SCNO);/
-                    Log.e("onResponse", "not=" + response.message());
+
                 } else {
-                    Log.e("onResponse", "====" +response.body().get(0).getITEMNAMEA());
+
                     if(Currencyvalu.equals("1"))
                         itemprice.setText(response.body().get(0).getF_D()+"  IQD ");
                     else
