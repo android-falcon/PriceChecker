@@ -3,6 +3,7 @@ package com.falconssoft.pricechecker;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Dialog;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -52,6 +53,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -64,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
     public  boolean openDial=false;
     RadioGroup CurrencyradioButton;
     String   Currencyvalu="0";
+    ApiPrice myAPI;
+    SweetAlertDialog pDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,9 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         priceCheckerDatabase=new PriceCheckerDatabase(MainActivity.this);
-        ipAddress =priceCheckerDatabase.getAllMainSetting();
-
-        cono=priceCheckerDatabase.getAllMainSetting_cono();
+        loadIpSetting();
         getWindow().setSoftInputMode(
 
                 WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
@@ -107,9 +112,11 @@ try {
                     Log.e("onEditorAction",""+editeTextItemCode.getText().toString());
                     ccleatext();
 //                    dialogForItem("مياه سما 250 مل ","0.25 JD");
-                    if(ipAddress.trim().length()!=0)
-                    new JSONTask_AccountStatment_Withdate().execute();
-                    Toast.makeText(MainActivity.this, "tex", Toast.LENGTH_SHORT).show();
+//                    if(ipAddress.trim().length()!=0)
+//                    new JSONTask_AccountStatment_Withdate().execute();
+                    String itemCode=editeTextItemCode.getText().toString().trim();
+                    fetchCallData(itemCode);
+//                    Toast.makeText(MainActivity.this, "tex", Toast.LENGTH_SHORT).show();
                 }
 
 
@@ -211,6 +218,11 @@ try {
         editeTextItemCode.requestFocus();
     }
 
+    void loadIpSetting(){
+          ipAddress =priceCheckerDatabase.getAllMainSetting();
+            cono=priceCheckerDatabase.getAllMainSetting_cono();
+
+    }
 
     void dialogSetting() {
         final Dialog settingDialog = new Dialog(MainActivity.this, R.style.Theme_Dialog);
@@ -221,7 +233,7 @@ try {
         String ip="";
            Currencyvalu="0";
         String   Currencyvalu2="0";
-        final EditText ipAddress=settingDialog.findViewById(R.id.ipAddress);
+         EditText ipAddress=settingDialog.findViewById(R.id.ipAddress);
         final EditText cono=settingDialog.findViewById(R.id.cono);
         CurrencyradioButton=settingDialog.findViewById(R.id. Currency);
        RadioButton jdCurrencyradioButton=settingDialog.findViewById(R.id. jdCurrencyradioButton);
@@ -282,11 +294,11 @@ try {
 
                     priceCheckerDatabase.deleteAllSetting();
                     priceCheckerDatabase.addAllMainSetting(ipAddress.getText().toString().trim(),cono.getText().toString().trim(),Currencyvalu);
-
+                    loadIpSetting();
                     settingDialog.dismiss();
                     try {
                         Currencyvalu= priceCheckerDatabase.getCurrencySetting();
-                        ipAddress=ip;
+//                        ipAddress=ip;
                         if(Currencyvalu.equals("1"))
                             itemprice.setText("0.00 IQD");
                         else    itemprice.setText("0.00 JD");
@@ -716,6 +728,65 @@ try {
 
                 .show();
     }
+
+
+
+    public void fetchCallData(String itemNo) {
+        String link = "http://" + ipAddress.trim() ;
+        Retrofit retrofit = RetrofitInstance.getInstance(link);
+        myAPI = retrofit.create(ApiPrice.class);
+        Log.e("getData","fetchCallData");
+        pDialog = new SweetAlertDialog(MainActivity.this, SweetAlertDialog.PROGRESS_TYPE);
+
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#31AFB4"));
+        pDialog.setTitleText("Loading Data");
+        pDialog.setCancelable(false);
+        pDialog.show();
+        Log.e("fetchCallData","itemNo="+itemNo);
+        Call<List<ItemInfo>> myData = myAPI.gaItemInfo(itemNo,cono);
+//        Log.e("onResponse", "fetchCallData=" );
+        myData.enqueue(new Callback<List<ItemInfo>>() {
+            @Override
+            public void onResponse(Call<List<ItemInfo>> call, Response<List<ItemInfo>> response) {
+
+                if (!response.isSuccessful()) {
+//                    fetchCashDetailData(from, toDat, pos, SCNO);/
+                    Log.e("onResponse", "not=" + response.message());
+                } else {
+                    Log.e("onResponse", "====" +response.body().get(0).getITEMNAMEA());
+                    if(Currencyvalu.equals("1"))
+                        itemprice.setText(response.body().get(0).getF_D()+"  IQD ");
+                    else
+                        itemprice.setText(response.body().get(0).getF_D()+"  JD ");
+
+                    itemname.setText(response.body().get(0).getITEMNAMEA());
+//                    if(openDial==false)
+//                    dialogForItem(itemName,qty);
+                    editeTextItemCode.setText("");
+                    editeTextItemCode.requestFocus();
+//                    myBindingCash.salesText.setText(response.body().get(0).getSALES());
+//                    myBindingCash.returnedText.setText(response.body().get(0).getRETURNED());
+//                    myBindingCash.netText.setText(response.body().get(0).getNET());
+
+//                    fetchCashDetailData(from, toDat, pos, SCNO);
+//             Log.e("onResponse", "=" + response.body().get(0).getSALES());
+
+                }
+                pDialog.dismiss();
+            }
+
+            @Override
+            public void onFailure(Call<List<ItemInfo>> call, Throwable throwable) {
+                Log.e("onFailure", "=" + throwable.getMessage());
+                pDialog.dismiss();
+                editeTextItemCode.setText("");
+                editeTextItemCode.requestFocus();
+//                fetchCashDetailData(from, toDat, pos,SCNO);
+                Toast.makeText(MainActivity.this, "Error"+throwable.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
         }
 
 
